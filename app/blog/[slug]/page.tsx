@@ -5,6 +5,8 @@ interface BlogPostPageProps {
 }
 
 export default function BlogPostPage({ params }: BlogPostPageProps) {
+
+    //////veri detayları çek
   return (
     <article className="max-w-3xl mx-auto">
       <header className="mb-8">
