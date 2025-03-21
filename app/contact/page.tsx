@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -36,7 +37,7 @@ export default function ContactPage() {
                 </label>
                 <input
                   type="text"
-                  id="name"
+                  id="Full Name"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   className="block w-full px-4 py-3 text-slate-900 placeholder:text-slate-400 rounded-xl border-slate-200 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
@@ -86,7 +87,13 @@ export default function ContactPage() {
               />
             </div>
 
-            <div className="flex justify-end">
+            <div className="flex items-center justify-between pt-4">
+              <Link 
+                href="/"
+                className="text-base text-indigo-600 hover:text-indigo-700 font-medium"
+              >
+                ← Back to Blog
+              </Link>
               <button
                 type="submit"
                 className="inline-flex justify-center rounded-xl bg-indigo-600 px-8 py-3.5 text-base font-semibold text-white shadow-sm hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors duration-200"

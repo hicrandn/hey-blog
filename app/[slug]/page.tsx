@@ -1,6 +1,6 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import { formatDate } from '../utils'
+import { formatDate } from '@/utils/formatDate'
 import ReactionButtons from '../components/ReactionButtons'
 
 interface Post {
@@ -8,73 +8,52 @@ interface Post {
   title: string
   body: string
   tags: string[]
-  reactions: {
-    likes: number
-    dislikes: number
-  }
-  views: number
+  reactions: number
   userId: number
 }
 
-interface User {
-  id: number
-  firstName: string
-  lastName: string
-  image: string
-  email: string
+interface RandomUser {
+  name: {
+    first: string
+    last: string
+  }
+  picture: {
+    large: string
+  }
 }
 
-async function getBlogPost(slug: string): Promise<Post | null> {
+async function getPost(id: string): Promise<Post | null> {
   try {
-    const id = slug.replace('blog-post-', '')
     const res = await fetch(`https://dummyjson.com/posts/${id}`, {
       next: { revalidate: 3600 }
-    })
-    
-    if (!res.ok) return null
-    const data = await res.json()
-    
-    // Format the body text properly
-    if (data.body) {
-      data.body = data.body
-        .replace(/\n/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim()
-    }
-    
-    return data
+    });
+    if (!res.ok) return null;
+    return res.json();
   } catch (error) {
-    console.error('Blog post fetch error:', error)
-    return null
+    console.error('Error fetching post:', error);
+    return null;
   }
 }
 
-async function getUser(userId: number): Promise<User | null> {
+async function getUser(userId: number) {
   try {
-    const res = await fetch(`https://randomuser.me/api/`, {
+    // Since we want consistent user data, we'll use a deterministic seed based on userId
+    const res = await fetch(`https://randomuser.me/api/?seed=user-${userId}`, {
       next: { revalidate: 3600 }
-    })
-    if (!res.ok) return null
-    
-    const data = await res.json()
-    const user = data.results[0]
-    
-    return {
-      id: userId,
-      firstName: user.name.first,
-      lastName: user.name.last,
-      image: user.picture.large,
-      email: user.email
-    }
+    });
+    if (!res.ok) throw new Error('Failed to fetch user');
+    const data = await res.json();
+    return data.results[0] as RandomUser;
   } catch (error) {
-    console.error('User fetch error:', error)
-    return null
+    console.error('Error fetching user:', error);
+    return null;
   }
 }
 
-export default async function BlogPostPage({ params }: { params: { slug: string } }) {
-  const post = await getBlogPost(params.slug)
-
+export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
+  const id = (await params).slug.replace('blog-post-', '')
+  const post = await getPost(id)
+  
   if (!post) {
     return (
       <div className="max-w-3xl mx-auto text-center py-12">
@@ -83,16 +62,22 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
           The blog post you're looking for couldn't be found or an error occurred.
         </p>
         <Link 
-          href="/blog" 
+          href="/" 
           className="mt-6 inline-block text-indigo-600 hover:text-indigo-500"
         >
-          ← Back to Blog
+          ← Back to Home
         </Link>
       </div>
     )
   }
 
-  const author = await getUser(post.userId)
+  const user = await getUser(post.userId);
+  const author = {
+    name: user ? `${user.name.first} ${user.name.last}` : `User ${post.userId}`,
+    image: user?.picture.large || `https://picsum.photos/seed/user-${post.userId}/400/400`
+  };
+  
+  const postDate = new Date().toISOString() // Using current date as dummy data doesn't provide dates
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-white">
@@ -118,35 +103,31 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
             
             {/* Author and Meta Info */}
             <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 text-gray-600">
-              {author && (
-                <div className="flex items-center gap-3">
-                  <Image
-                    src={author.image}
-                    alt={`${author.firstName} ${author.lastName}`}
-                    width={40}
-                    height={40}
-                    className="rounded-full"
-                  />
-                  <div>
-                    <p className="text-sm text-gray-600">Written by</p>
-                    <p className="text-sm font-medium text-gray-900">
-                      {author.firstName} {author.lastName}
-                    </p>
-                  </div>
+              <div className="flex items-center gap-3">
+                <Image
+                  src={author.image}
+                  alt={author.name}
+                  width={40}
+                  height={40}
+                  className="rounded-full"
+                />
+                <div>
+                  <p className="text-sm text-gray-600">Written by</p>
+                  <p className="text-sm font-medium text-gray-900">
+                    {author.name}
+                  </p>
                 </div>
-              )}
+              </div>
               <div className="flex items-center gap-3 text-sm">
-                <span>{formatDate(post.id)}</span>
+                <span>{formatDate(postDate)}</span>
                 <span>•</span>
                 <span>{Math.ceil(post.body.split(' ').length / 200)} min read</span>
-                <span>•</span>
-                <span>{post.views} views</span>
               </div>
             </div>
 
             {/* Tags */}
             <div className="flex flex-wrap gap-2 mt-6">
-              {post.tags.map((tag) => (
+              {post.tags.map((tag: string) => (
                 <span
                   key={tag}
                   className="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-sm font-medium"
@@ -159,7 +140,7 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
 
           {/* Article Body */}
           <div className="prose prose-lg max-w-none">
-            {post.body.split(/[.!?]/).map((sentence, index) => {
+            {post.body.split(/[.!?]/).map((sentence: string, index: number) => {
               const trimmedSentence = sentence.trim()
               if (!trimmedSentence) return null
               
@@ -174,17 +155,17 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
 
           {/* Footer */}
           <div className="mt-12 pt-8 border-t border-gray-100">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <ReactionButtons 
-                initialLikes={post.reactions.likes}
-                initialDislikes={post.reactions.dislikes}
-              />
-              <Link
-                href="/blog"
-                className="inline-flex items-center text-indigo-600 hover:text-indigo-500 font-medium"
+            <div className="flex items-center justify-between">
+              <Link 
+                href="/"
+                className="text-base text-indigo-600 hover:text-indigo-700 font-medium"
               >
-                ← Back to Blog
+                ← Back to Home
               </Link>
+              <ReactionButtons 
+                initialLikes={Math.floor(post.reactions / 2)}
+                initialDislikes={Math.floor(post.reactions / 4)}
+              />
             </div>
           </div>
         </div>
