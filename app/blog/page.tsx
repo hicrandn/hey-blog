@@ -1,64 +1,95 @@
-import BlogCard from '@/app/blog/components/BlogCard'
+import BlogCard from './components/BlogCard';
 
-export default function BlogPage() {
-  const blogPosts = [
-    {
-      id: 1,
-      title: 'Next.js ile Modern Web Uygulamaları',
-      description: 'Next.js framework\'ünün temel özellikleri ve modern web uygulamaları geliştirmedeki rolü.',
-      date: '1 Ocak 2024',
-      readTime: '5 dk okuma'
-    },
-    {
-      id: 2,
-      title: 'TypeScript Best Practices',
-      description: 'TypeScript ile daha güvenli ve sürdürülebilir kod yazmanın yolları.',
-      date: '2 Ocak 2024',
-      readTime: '7 dk okuma'
-    },
-    {
-      id: 3,
-      title: 'Tailwind CSS ile Hızlı UI Geliştirme',
-      description: 'Tailwind CSS kullanarak modern ve responsive kullanıcı arayüzleri oluşturma.',
-      date: '3 Ocak 2024',
-      readTime: '6 dk okuma'
-    },
-    {
-      id: 4,
-      title: 'React Hooks Deep Dive',
-      description: 'React Hooks\'un detaylı kullanımı ve best practices.',
-      date: '4 Ocak 2024',
-      readTime: '8 dk okuma'
-    },
-    {
-      id: 5,
-      title: 'Web Performans Optimizasyonu',
-      description: 'Web uygulamalarında performans optimizasyonu için temel teknikler.',
-      date: '5 Ocak 2024',
-      readTime: '6 dk okuma'
-    },
-    {
-      id: 6,
-      title: 'SEO Best Practices',
-      description: 'Modern web uygulamalarında SEO optimizasyonu için önemli ipuçları.',
-      date: '6 Ocak 2024',
-      readTime: '7 dk okuma'
-    }
-  ]
+interface User {
+  id: number
+  firstName: string
+  lastName: string
+  image: string
+  email: string
+}
+
+interface Post {
+  id: number
+  title: string
+  body: string
+  tags: string[]
+  reactions: {
+    likes: number
+    dislikes: number
+  }
+  views: number
+  userId: number
+}
+
+interface BlogResponse {
+  posts: Post[]
+  total: number
+  skip: number
+  limit: number
+}
+
+async function getBlogPosts(): Promise<Post[]> {
+  const res = await fetch('https://dummyjson.com/posts', {
+    next: { revalidate: 3600 } // Revalidate every hour
+  })
+  const data: BlogResponse = await res.json()
+  return data.posts
+}
+
+async function getUsers(): Promise<User[]> {
+  // Fetch 100 random users from RandomUser API
+  const res = await fetch('https://randomuser.me/api/?results=100', {
+    next: { revalidate: 3600 }
+  })
+  const data = await res.json()
+  
+  // Map RandomUser data to our User interface
+  return data.results.map((user: any, index: number) => ({
+    id: index + 1, // Map to match DummyJSON post userId
+    firstName: user.name.first,
+    lastName: user.name.last,
+    image: user.picture.large,
+    email: user.email
+  }))
+}
+
+export default async function BlogPage() {
+  const [posts, users] = await Promise.all([getBlogPosts(), getUsers()])
+  const usersMap = new Map(users.map(user => [user.id, user]))
 
   return (
-    <div className="space-y-8">
-      <div className="text-center mb-12">
-        <h1 className="text-4xl font-bold mb-4">Blog Yazıları</h1>
-        <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-          Teknoloji, yaşam ve daha fazlası hakkında detaylı yazılar.
-        </p>
-      </div>
+    <div className="min-h-screen ">
+      <div className="max-w-6xl mx-auto px-4 py-12 sm:px-6 lg:px-8">
+        <div className="text-center mb-16">
+          <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">
+            BLOG POSTS
+          </h1>
+          <p className="text-xl text-gray-600">
+            Detailed articles about technology, life, and more.
+          </p>
+        </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {blogPosts.map((post) => (
-          <BlogCard key={post.id} {...post} />
-        ))}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {posts.map((post) => {
+            const author = usersMap.get(post.userId)
+            if (!author) return null
+            
+            return (
+              <BlogCard
+                key={post.id}
+                id={post.id}
+                title={post.title}
+                body={post.body.substring(0, 100) + '...'}
+                readTime={`${Math.ceil(post.body.split(' ').length / 200)} min`}
+                author={{
+                  name: `${author.firstName} ${author.lastName}`,
+                  image: author.image,
+                  email: author.email
+                }}
+              />
+            )
+          })}
+        </div>
       </div>
     </div>
   )
