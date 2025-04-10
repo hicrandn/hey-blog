@@ -8,7 +8,10 @@ interface Post {
   id: number
   title: string
   body: string
-  reactions: number
+  reactions: {
+    likes: number
+    dislikes: number
+  }
   tags: string[]
 }
 
@@ -31,7 +34,7 @@ export function useSearch() {
 
       setIsLoading(true)
       try {
-        const res = await fetch(`https://dummyjson.com/posts/search?q=${debouncedSearch}&limit=5`)
+        const res = await fetch(`https://dummyjson.com/posts/search?q=${debouncedSearch}&limit=5`) //client side fetch yapılır
         const data = await res.json()
         
         // Transform the data to match our Post interface
