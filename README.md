@@ -2,6 +2,10 @@
 
 A modern and minimalist blog platform built with Next.js 15, TypeScript, and Tailwind CSS.
 
+## Demo Link
+--https://hey-blog.vercel.app/
+
+
 ## 🌟 Features
 
 - **Modern Design**: Clean and user-friendly interface
@@ -83,6 +87,5 @@ The design can be easily customized using Tailwind CSS:
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📄 License
 
-Distributed under the MIT License. See `LICENSE` for more information.
+
